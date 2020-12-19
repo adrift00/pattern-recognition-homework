@@ -9,8 +9,10 @@ from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QWidget
 from PyQt5.QtGui import QImage, QPainter, QPen, QPixmap
 from PyQt5.QtCore import Qt, QPoint
 
-from models.naive_bayes import NaiveBayes
-from models.gaussian_naive_bayes import GaussianNaiveBayes
+from models.bayes.naive_bayes import NaiveBayes
+from models.bayes.gaussian_naive_bayes import GaussianNaiveBayes
+from models.fisher import Fisher
+from models.alexnet import AlexnetTrainer
 
 
 class DrawWindow(QWidget):
@@ -21,8 +23,12 @@ class DrawWindow(QWidget):
         self.lastPoint = QPoint()  # 起始点
         self.endPoint = QPoint()  # 终点
         self.initUi()
-        self.bayes_cls=NaiveBayes(class_num=10)
-        # self.bayes_cls=GaussianNaiveBayes(class_num=10)
+        # self.classfier=NaiveBayes(class_num=10)
+        # self.classfier=GaussianNaiveBayes(class_num=10)
+        self.classfier =Fisher()
+        # self.classfier=AlexnetTrainer()
+        if isinstance(self.classfier,AlexnetTrainer):
+            self.classfier.load_model()
 
     def initUi(self):
         # 窗口大小设置为600*500
@@ -94,7 +100,8 @@ class DrawWindow(QWidget):
             # 进行重新绘制
             self.update()
     def train(self):
-        self.bayes_cls.train('../MNIST-JPG-master/mnist_data/training')
+        print('start train model, please wait for a few minutes.')
+        self.classfier.train('../MNIST-JPG-master/mnist_data/training')
         print('train finished! ')
     
     def test(self,):
@@ -105,16 +112,17 @@ class DrawWindow(QWidget):
         # if not os.path.exists(write_img_dir):
         #     os.makedirs(write_img_dir)
         # img_num=len(os.listdir(write_img_dir))
-        pred_class=self.bayes_cls.test(img)
+        pred_class=self.classfier.test(img)
         print(pred_class)
 
         # show the bin img
-        bin_img=self.bayes_cls.binary_img.astype(np.uint8)
-        w=bin_img.shape[1]
-        h=bin_img.shape[0]
-        qimg=QImage(bin_img.data,w ,h, w, QImage.Format_Grayscale8)
-        self.bin_pix=QPixmap().fromImage(qimg)
-        self.update()
+        if not isinstance(self.classfier,AlexnetTrainer):
+            bin_img=self.classfier.binary_img.astype(np.uint8)
+            w=bin_img.shape[1]
+            h=bin_img.shape[0]
+            qimg=QImage(bin_img.data,w ,h, w, QImage.Format_Grayscale8)
+            self.bin_pix=QPixmap().fromImage(qimg)
+            self.update()
 
     def save(self,):
         qimg = self.pix.toImage()
